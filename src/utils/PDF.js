@@ -99,6 +99,7 @@ export async function save(pdfFile, objects, name) {
                   borderWidth: 0
                 });
               } else {
+                // Create pixelation
                 const pixelSize = 10;
                 for (let px = 0; px < width; px += pixelSize) {
                   for (let py = 0; py < height; py += pixelSize) {
