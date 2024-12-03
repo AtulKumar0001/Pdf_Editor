@@ -16,6 +16,7 @@
   } from "./utils/asyncReader.js";
   import { ggID } from "./utils/helper.js";
   import { save } from "./utils/PDF.js";
+  import BlurEraseTools from "./BlurEraseTools.svelte";
   const genID = ggID();
   let pdfFile;
   let pdfName = "";
@@ -27,6 +28,8 @@
   let selectedPageIndex = -1;
   let saving = false;
   let addingDrawing = false;
+  let addingBlur = false;
+  let addingErase = false;
   // for test purpose
   onMount(async () => {
     try {
@@ -189,6 +192,48 @@
       saving = false;
     }
   }
+  function addBlurArea() {
+    if (selectedPageIndex >= 0) {
+      const id = genID();
+      const object = {
+        id,
+        type: "blur",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 50
+      };
+      allObjects = allObjects.map((objects, pIndex) =>
+        pIndex === selectedPageIndex ? [...objects, object] : objects
+      );
+    }
+  }
+  function addEraseArea() {
+    if (selectedPageIndex >= 0) {
+      const id = genID();
+      const object = {
+        id,
+        type: "erase",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 50
+      };
+      allObjects = allObjects.map((objects, pIndex) =>
+        pIndex === selectedPageIndex ? [...objects, object] : objects
+      );
+    }
+  }
+  async function handleSave() {
+    try {
+      saving = true;
+      await save(pdfFile, allObjects, pdfName);
+      saving = false;
+    } catch (e) {
+      console.log('Error saving PDF:', e);
+      saving = false;
+    }
+  }
 </script>
 
 <svelte:window
@@ -246,6 +291,22 @@
         class:bg-gray-500={selectedPageIndex < 0}>
         <img src="gesture.svg" alt="An icon for adding drawing" />
       </label>
+      <label
+        class="flex items-center justify-center h-full w-8 hover:bg-gray-500
+        cursor-pointer"
+        on:click={addBlurArea}
+        class:cursor-not-allowed={selectedPageIndex < 0}
+        class:bg-gray-500={selectedPageIndex < 0}>
+        <img src="blur.svg" alt="An icon for adding blur" />
+      </label>
+      <label
+        class="flex items-center justify-center h-full w-8 hover:bg-gray-500
+        cursor-pointer"
+        on:click={addEraseArea}
+        class:cursor-not-allowed={selectedPageIndex < 0}
+        class:bg-gray-500={selectedPageIndex < 0}>
+        <img src="erase.svg" alt="An icon for adding erase" />
+      </label>
     </div>
     <div class="justify-center mr-3 md:mr-4 w-full max-w-xs hidden md:flex">
       <img src="/edit.svg" class="mr-2" alt="a pen, edit pdf name" />
@@ -256,7 +317,7 @@
         bind:value={pdfName} />
     </div>
     <button
-      on:click={savePDF}
+      on:click={handleSave}
       class="w-20 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3
       md:px-4 mr-3 md:mr-4 rounded"
       class:cursor-not-allowed={pages.length === 0 || saving || !pdfFile}
@@ -346,6 +407,16 @@
                     width={object.width}
                     originWidth={object.originWidth}
                     originHeight={object.originHeight}
+                    pageScale={pagesScale[pIndex]} />
+                {:else if object.type === 'blur' || object.type === 'erase'}
+                  <BlurEraseTools
+                    on:update={e => updateObject(object.id, e.detail)}
+                    on:delete={() => deleteObject(object.id)}
+                    type={object.type}
+                    x={object.x}
+                    y={object.y}
+                    width={object.width}
+                    height={object.height}
                     pageScale={pagesScale[pIndex]} />
                 {/if}
               {/each}
